@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import argparse
 from unidiff import PatchSet
 from typing import Optional, Dict
 
@@ -9,10 +10,6 @@ from requests.models import Response
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError, RequestException
 from urllib3.util.retry import Retry
-
-logging.basicConfig(
-    level=logging.INFO, format="[%(asctime)s][%(levelname)s] %(message)s"
-)
 
 
 class MaaFrameworkUpdater:
@@ -51,6 +48,17 @@ class MaaFrameworkUpdater:
 
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(os.path.join(self.base_dir, self.diff_dir), exist_ok=True)
+
+        log_dir = os.path.join(self.base_dir, "debug")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, "update.log")
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format="[%(asctime)s][%(levelname)s] %(message)s",
+            filename=log_file,
+            filemode="a",
+        )
 
     def read_interface(self) -> bool:
         """
@@ -332,28 +340,47 @@ class MaaFrameworkUpdater:
         return False
 
 
-if __name__ == "__main__":
-    print("Step 1:")
-    updater = MaaFrameworkUpdater(
-        base_dir=".",
-        token="your_github_token",
+def main():
+    parser = argparse.ArgumentParser(description="MaaFramework Updater CLI")
+    parser.add_argument("--base-dir", type=str, default=".", help="Base directory")
+    parser.add_argument(
+        "--diff-dir", type=str, default="patch", help="Directory to store diffs"
     )
-    print("Step 2:")
+    parser.add_argument(
+        "--prerelease", action="store_true", help="Include prerelease versions"
+    )
+    parser.add_argument("--token", type=str, required=True, help="GitHub token")
+    args = parser.parse_args()
+
+    updater = MaaFrameworkUpdater(
+        base_dir=args.base_dir,
+        diff_dir=args.diff_dir,
+        prerelease=args.prerelease,
+        token=args.token,
+    )
+
     if updater.read_interface():
         print(f"Current version: {updater.current_version}")
-        print("Step 3: Check")
-        print(updater.check_token_validity())
-        print("Step 4:")
-        if updater.get_latest_version():
-            print(f"Latest version: {updater.latest_version}")
-            print("Step 5:")
-            if updater.latest_version != updater.current_version:
-                print(f"New version available: {updater.latest_version}")
-                changelog = updater.generate_changelog()
-                print(changelog)
-                print("Step 6:")
-                if updater.patch():
-                    print("Patch applied successfully.")
+        if updater.check_token_validity():
+            if updater.get_latest_version():
+                print(f"Latest version: {updater.latest_version}")
+                if updater.latest_version != updater.current_version:
+                    print(f"New version available: {updater.latest_version}")
+                    changelog = updater.generate_changelog()
+                    print("Changelog:\n", changelog)
+                    if updater.patch():
+                        print("Patch applied successfully.")
+                    else:
+                        print("Failed to apply patch.")
                 else:
-                    print("Failed to apply patch.")
-    print("Done!")
+                    print("You are already up-to-date.")
+            else:
+                print("Failed to get the latest version.")
+        else:
+            print("Invalid GitHub token.")
+    else:
+        print("Failed to read interface.json file.")
+
+
+if __name__ == "__main__":
+    main()
