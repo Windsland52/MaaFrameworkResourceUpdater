@@ -281,7 +281,7 @@ class MaaFrameworkUpdater:
                         logging.warning(
                             f"File {current_file_path} does not exist, skipping..."
                         )
-                    continue
+                        continue
 
                 with open(current_file_path, "r", encoding="utf-8") as original_file:
                     original_content = original_file.readlines()
