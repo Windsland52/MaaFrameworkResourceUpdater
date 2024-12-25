@@ -367,27 +367,34 @@ def main():
         token=args.token,
     )
 
-    if updater.read_interface():
-        print(f"Current version: {updater.current_version}")
-        if updater.check_token_validity():
-            if updater.get_latest_version():
-                print(f"Latest version: {updater.latest_version}")
-                if updater.latest_version != updater.current_version:
-                    print(f"New version available: {updater.latest_version}")
-                    changelog = updater.generate_changelog()
-                    print("Changelog:\n", changelog)
-                    if updater.patch():
-                        print("Patch applied successfully.")
-                    else:
-                        print("Failed to apply patch.")
-                else:
-                    print("You are already up-to-date.")
-            else:
-                print("Failed to get the latest version.")
-        else:
-            print("Invalid GitHub token.")
-    else:
+    if not updater.read_interface():
         print("Failed to read interface.json file.")
+        return
+
+    print(f"Current version: {updater.current_version}")
+
+    if not updater.check_token_validity():
+        print("Invalid GitHub token.")
+        return
+
+    if not updater.get_latest_version():
+        print("Failed to get the latest version.")
+        return
+
+    print(f"Latest version: {updater.latest_version}")
+
+    if updater.latest_version == updater.current_version:
+        print("You are already up-to-date.")
+        return
+
+    print(f"New version available: {updater.latest_version}")
+    changelog = updater.generate_changelog()
+    print("Changelog:\n", changelog)
+
+    if updater.patch():
+        print("Patch applied successfully.")
+    else:
+        print("Failed to apply patch.")
 
 
 if __name__ == "__main__":
