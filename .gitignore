@@ -1,0 +1,36 @@
+# 前提条件：忽略所有 .pyc 文件
+*.pyc
+
+# 忽略虚拟环境目录
+venv/
+env/
+
+# 忽略 PyCharm 的项目配置文件
+.idea/
+
+# 忽略 VSCode 的项目配置文件
+.vscode/
+
+# 忽略所有 .log 文件
+*.log
+
+# 忽略特定目录
+debug/
+patch/
+
+# 忽略所有 .diff 文件
+*.diff
+
+# 忽略所有临时文件
+*.tmp
+*~
+
+# 忽略构建目录
+build/
+dist/
+*.egg-info/
+
+# 忽略maa文件
+resource
+interface.json
+
