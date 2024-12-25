@@ -193,7 +193,9 @@ class MaaFrameworkUpdater:
             response = self.get_request_response(url=compare_url)
             diff_url = response.json()["diff_url"]
             diff_response = self.get_request_response(url=diff_url)
-            return diff_response.text
+            # 确保 diff_response 使用 utf-8 编码
+            diff_content = diff_response.content.decode("utf-8")
+            return diff_content
         except KeyError:
             raise Exception("Failed to retrieve the diff URL from the response.")
 
@@ -235,7 +237,10 @@ class MaaFrameworkUpdater:
             # 解析补丁
             patchset = PatchSet.from_string(patch_content)
             for patched_file in patchset:
-                current_file_path = patched_file.path
+                # 确保文件路径中的非 ASCII 字符正确处理
+                current_file_path = patched_file.path.encode("utf-8").decode(
+                    "unicode_escape"
+                )
                 logging.info(f"Patching file {current_file_path}")
 
                 # remove
@@ -252,16 +257,19 @@ class MaaFrameworkUpdater:
                 # rename
                 if patched_file.is_rename:
                     if os.path.exists(current_file_path):
-                        os.rename(current_file_path, patched_file.target_file)
+                        target_file_path = patched_file.target_file.encode(
+                            "utf-8"
+                        ).decode("unicode_escape")
+                        os.rename(current_file_path, target_file_path)
                         logging.info(
-                            f"Renamed file from {current_file_path} to {patched_file.target_file}"
+                            f"Renamed file from {current_file_path} to {target_file_path}"
                         )
                     else:
                         logging.warning(
                             f"File {current_file_path} does not exist for renaming, skipping..."
                         )
                         continue
-                    current_file_path = patched_file.target_file
+                    current_file_path = target_file_path
 
                 if not os.path.exists(current_file_path):
                     # add
@@ -273,7 +281,7 @@ class MaaFrameworkUpdater:
                         logging.warning(
                             f"File {current_file_path} does not exist, skipping..."
                         )
-                        continue
+                    continue
 
                 with open(current_file_path, "r", encoding="utf-8") as original_file:
                     original_content = original_file.readlines()
@@ -313,7 +321,7 @@ class MaaFrameworkUpdater:
                 data = json.load(file)
                 data["version"] = self.latest_version
                 file.seek(0)  # Reset file pointer to the beginning
-                json.dump(data, file, indent=4)
+                json.dump(data, file, indent=4, ensure_ascii=False)
                 file.truncate()  # Ensure the file is properly truncated
             os.chdir(original_cwd)
             return True
